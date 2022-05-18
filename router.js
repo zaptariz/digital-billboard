@@ -27,5 +27,30 @@ router.post('/signup', async (req, res) => {
     }
 })
 
+//create a  signin ( login ) API
+router.post('/signin', async (req, res) => {
+    try {
+        let email_check = await model.findOne({ email_id: req.body.email_id })
+        let email_password = email_check.password
+        if (email_check) {
+            //this password from request
+            let pas_from_user = req.body.password
+            // this password from DB
+            let pas_fromm_db = email_password
+            //encrypt the password and save to psswd_vald for validation purpose
+            let psswd_vald = await bcrypt.compare(pas_from_user, pas_fromm_db);
+            if (psswd_vald)
+                res.json('log in successfull').status(200)
+            else
+                res.json('credential not matched').status(400)
+        }
+        else
+            res.json('Email Id not found signup with your mail').status(400)
+    }
+    catch (error) {
+        res.send(error.message).status(400)
+    }
+})
+
 //export the router 
 module.exports = router
