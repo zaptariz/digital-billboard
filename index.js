@@ -8,15 +8,19 @@ const application = express();
 application.use(express.json())
 
 //port expose on localhost
-application.listen(19090,() => {
-    console.log("server up ")
+application.listen(19090, (err, data) => {
+    console.log("\n\n                            SERVER UP");
 })
 
 //connectivity for mongodb with default port
-const connect  = () => {
-    mongoose.connect('mongodb://localhost',(err,data) =>{
-        console.log(" DB CONNECTED")
-    })
+const connect = () => {
+    try {
+        mongoose.connect('mongodb://localhost', (err, data) => {
+            console.log("                            DB CONNECTED                 \n")
+        })
+    } catch (error) {
+        console.log("sdfsf", error)
+    }
 }
 // Invoke DB connection
 connect();

@@ -1,7 +1,10 @@
 //required modules and packages
 const router = require('express').Router();
 const bcrypt = require('bcrypt');
-const { model } = require('./schema');
+const jwt = require('jsonwebtoken')
+const adminAuth = require('./middleware/admin_auth')
+const { model, ads, usertoken } = require('./schema');
+
 
 //create a Registration API
 router.post('/signup', async (req, res) => {
@@ -27,6 +30,7 @@ router.post('/signup', async (req, res) => {
     }
 })
 
+
 //create a  signin ( login ) API
 router.post('/signin', async (req, res) => {
     try {
@@ -39,16 +43,90 @@ router.post('/signin', async (req, res) => {
             let pas_fromm_db = email_password
             //encrypt the password and save to psswd_vald for validation purpose
             let psswd_vald = await bcrypt.compare(pas_from_user, pas_fromm_db);
-            if (psswd_vald)
-                res.json('log in successfull').status(200)
+            if (psswd_vald) {
+                let payload = {
+                    id: email_check._id,
+                    email: email_check.email_id
+                }
+                let token = jwt.sign(payload, "secret")
+                // console.log('payload : ',payload, token)
+                let tokenPayload = {
+                    user: email_check._id,
+                    token: token
+                }
+                //save the tokan in usertoken
+                await new usertoken(tokenPayload).save()
+                res.json(tokenPayload).status(200)
+                console.log("logged in Successfully ", tokenPayload.user)
+            }
             else
-                res.json('credential not matched').status(400)
+                return res.json('credential not matched').status(400)
         }
         else
-            res.json('Email Id not found signup with your mail').status(400)
+            return res.json('Email Id not found signup with your mail').status(400)
     }
     catch (error) {
-        res.send(error.message).status(400)
+        return res.status(404).send(error.message)
+    }
+})
+//create a new add here
+//adminAuth is a middileware to check the user were right user or not
+router.post('/create_add', adminAuth, async (req, res) => {
+    try {
+        let request = req.body
+        let payload = {
+            title: request.title ? request.title : "",
+            content: request.content,
+            starttime: request.starttime,
+            endtime: request.endtime
+        }
+        await new ads(payload).save()
+        return res.json('Add created successfully').status(200)
+    }
+    catch (error) {
+        console.log(error.message)
+        return res.status(400).json(error.message)
+    }
+})
+//to show the adds
+router.get('/show_add', adminAuth, async (req, res) => {
+    try {
+        let date = new Date();
+        let advertisements = await ads.find({
+            //aggregation were used for checking the adds times
+            'starttime': { $lte: date },
+            'endtime': { $gte: date },
+            is_active: true
+        });
+        //to check there 'advertisements' is empty or not
+        if (advertisements.length == 0) {
+            return res.json([{ title: 'There is no ads, Contact to show your ad here' }]).status(200)
+        }
+        return res.json(advertisements).status(200)
+    }
+    catch (error) {
+        return res.json(error.message).status(200)
+    }
+})
+//Update the exisiting adds using the _id
+router.patch('/update_ads/:id', adminAuth, async (req, res) => {
+    try {
+        let params = req.params.id
+        let payload = req.body
+        await ads.findOneAndUpdate({ _id: params }, payload)
+        return res.json('update successfully').status(200)
+    } catch (error) {
+        return res.json(error.message).status(400)
+    }
+})
+//delete the add 
+router.delete('/delete', adminAuth, async (req, res) => {
+    try {
+        let params = req.body
+        await model.deleteOne({ name: params })
+        return res.json('update successfully').status(200)
+    } catch (error) {
+        return res.json(error.message).status(400)
     }
 })
 
