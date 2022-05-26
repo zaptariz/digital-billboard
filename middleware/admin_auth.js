@@ -1,7 +1,19 @@
-const jwt = require('jsonwebtoken')
-const { model, usertoken } = require('../schema')
 
-module.exports = async (req, res, next) => {
+const jwt = require('jsonwebtoken')
+const { usertoken } = require('../models/JwtToken')
+const { model } = require('../models/UserModel')
+
+
+/*********************************
+ * JsonWebToken For adminAuthenticaton.
+ *
+ * @param {string}      headers
+ * @param {object}      id
+ * @param {string}      email
+ * 
+ * @returns {function}
+ *********************************/
+const adminAuth = async (req, res, next) => {
     try {
         let header = req.headers.authorization
         let verify_token = await jwt.verify(header, "secret")
@@ -12,7 +24,7 @@ module.exports = async (req, res, next) => {
         else {
             let find_mail = await model.findOne({ email_id: verify_token.email })
             if (find_mail) {
-                if (find_mail.role == 2) {
+                if (find_mail.role == 1) {
                     req.user = find_mail
                     next()
                 }
@@ -25,3 +37,5 @@ module.exports = async (req, res, next) => {
         return res.status(401).json(error.message);
     }
 };
+
+module.exports = adminAuth
